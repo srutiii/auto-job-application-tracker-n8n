@@ -1,0 +1,635 @@
+{
+  "name": "Auto Job Application Tracker (MVP)",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Get current date\nconst today = new Date();\n\n// Helper: parse dates safely\nfunction parseSheetDate(value) {\n  if (!value) return null;\n\n  // ISO format\n  if (!isNaN(Date.parse(value))) {\n    return new Date(value);\n  }\n\n  // DD/MM/YYYY\n  if (typeof value === \"string\" && value.includes(\"/\")) {\n    const parts = value.split(\"/\");\n    if (parts.length === 3) {\n      return new Date(parts[2], parts[1] - 1, parts[0]);\n    }\n  }\n\n  return null;\n}\n\n// Helper: day difference\nfunction daysBetween(d1, d2) {\n  return Math.floor((d1 - d2) / (1000 * 60 * 60 * 24));\n}\n\n// MAIN LOGIC\nreturn $input.all().map(item => {\n  const json = item.json || {};\n\n  const subject = json.Subject || \"\";\n  const from = json.From || \"\";\n  const body = json.Body || \"\";\n\n  // ---------- COMPANY ----------\n  let company = null;\n\n  // 1. From subject\n  const subjectMatch = subject.match(/applying to (.+)$/i);\n  if (subjectMatch) {\n    company = subjectMatch[1].trim();\n  }\n\n  // 2. From sender domain fallback\n  if (!company && from.toLowerCase().includes(\"google\")) {\n    company = \"Google\";\n  }\n\n  // ---------- ROLE ----------\n  // Confirmation emails usually don't have roles\n  let role = null;\n\n  // ---------- STATUS ----------\n  const status = \"Applied\";\n\n  // ---------- FOLLOWUP ----------\n  const followup = json[\"Followup Sent\"] || \"No\";\n\n  // ---------- DATE ----------\n  const appliedDate = parseSheetDate(json[\"Applied Date\"]) || today;\n  const age = daysBetween(today, appliedDate);\n\n  return {\n    json: {\n      Company: company,\n      Role: role,\n      Status: status,\n      Followup: followup,\n      StatusLength: age,\n      AppliedDate: appliedDate.toISOString().split(\"T\")[0],\n      Subject: subject,\n      Source: from\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -1008
+      ],
+      "id": "24506616-24d5-4fac-bfad-d5698180a52f",
+      "name": "Retrival of data from the conformation mail"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1L5YkZ6vzZDkHMX6Cq647U3VUZ4w47FjsZ2s1YQpzihw/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1L5YkZ6vzZDkHMX6Cq647U3VUZ4w47FjsZ2s1YQpzihw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Role": "={{ $json.Role }}",
+            "Source": "={{ $json.Source }}",
+            "Applied Date": "={{ $json.AppliedDate }}",
+            "Email Subject": "={{ $json.Subject }}",
+            "Thread_ID": "={{ $('Applying to the company').item.json.threadId }}",
+            "Status": "Applied",
+            "Followup Sent": "NO",
+            "Last Activity": "={{ $now.format('yyyy-MM-dd') }}",
+            "Company": "={{ $json.Company }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Applied Date",
+              "displayName": "Applied Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Subject",
+              "displayName": "Email Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup Sent",
+              "displayName": "Followup Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Activity",
+              "displayName": "Last Activity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thread_ID",
+              "displayName": "Thread_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -304,
+        -1008
+      ],
+      "id": "82cb1411-4ea3-40d3-bbe3-81cfedc7bc41",
+      "name": "Adding the applied job to the sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "A4OiyKT49pNjctfe",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "labelIds": [
+            "INBOX",
+            "CATEGORY_PERSONAL",
+            "IMPORTANT"
+          ],
+          "q": "Subject:(Re: )"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1072,
+        -640
+      ],
+      "id": "02ef879f-385f-4acb-8616-4a4f16d42e03",
+      "name": "Recieved Reply from the company",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "buCDENkadHtdPBrT",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1072,
+        -992
+      ],
+      "id": "b4252b90-8d37-44b8-968e-d3d92a421b2e",
+      "name": "Applying to the company",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "buCDENkadHtdPBrT",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1L5YkZ6vzZDkHMX6Cq647U3VUZ4w47FjsZ2s1YQpzihw/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1L5YkZ6vzZDkHMX6Cq647U3VUZ4w47FjsZ2s1YQpzihw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "={{ $json.Status }}",
+            "Last Activity": "={{ $now.format('yyyy-MM-dd') }}",
+            "Thread_ID": "={{ $('Recieved Reply from the company').item.json.threadId }}"
+          },
+          "matchingColumns": [
+            "Thread_ID"
+          ],
+          "schema": [
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Applied Date",
+              "displayName": "Applied Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Subject",
+              "displayName": "Email Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup Sent",
+              "displayName": "Followup Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Activity",
+              "displayName": "Last Activity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thread_ID",
+              "displayName": "Thread_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -624,
+        -640
+      ],
+      "id": "0ff55eab-0644-43e7-8f4c-2d1f5737127a",
+      "name": "Update the status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "A4OiyKT49pNjctfe",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "58e50a48-7d1b-4774-bc55-7ddf30e7e1b1",
+              "name": "Status",
+              "value": "={{ \n(() => {\n  const body = (\n    $json.textPlain ||\n    $json.snippet ||\n    ''\n  ).toLowerCase();\n\n  if (body.includes('regret') || body.includes('unfortunately')) {\n    return 'Rejected';\n  }\n\n  if (body.includes('interview') || body.includes('schedule') || body.includes('available')) {\n    return 'Interview';\n  }\n\n  if (body.includes('assignment') || body.includes('task') || body.includes('assessment')) {\n    return 'Assignment';\n  }\n\n  return 'Replied';\n})()\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "54b24779-c014-4308-973e-47a733054a55",
+              "name": "LastUpdatedAt",
+              "value": "={{ new Date().toISOString() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -848,
+        -640
+      ],
+      "id": "c4992167-5698-4a44-b363-fefc01f1fd7f",
+      "name": "Categorise the status based on the reply"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        -640
+      ],
+      "id": "30a18f82-e53c-4c1e-bb58-37368137d0ce",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1L5YkZ6vzZDkHMX6Cq647U3VUZ4w47FjsZ2s1YQpzihw/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1L5YkZ6vzZDkHMX6Cq647U3VUZ4w47FjsZ2s1YQpzihw/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -160,
+        -640
+      ],
+      "id": "073212cf-747a-4940-ad26-2011e3740890",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "A4OiyKT49pNjctfe",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Handling replies from companies\nAutomatically updates the status of your job applications based on company replies. Reduces manual tracking effort.",
+        "height": 320,
+        "width": 704,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1184,
+        -768
+      ],
+      "typeVersion": 1,
+      "id": "91990541-a466-4afa-998a-888154645906",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Applying to new jobs and updating sheets \nExtracts details from confirmation emails, checks for duplicates, and appends new applications to your master sheet.",
+        "height": 320,
+        "width": 1040,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1184,
+        -1120
+      ],
+      "typeVersion": 1,
+      "id": "2705af01-ddab-41d8-a39e-6c2d95d8b38e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Scheduled workflow\nRuns daily to process pending applications or perform cleanup tasks, ensuring your tracker is always up-to-date.",
+        "height": 320,
+        "width": 592,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -416,
+        -768
+      ],
+      "typeVersion": 1,
+      "id": "6f1e5469-35a9-4e53-a186-a99208d02644",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# Auto Job Application Tracker (MVP) \n ## Streamline your job applications automatically.",
+        "height": 112,
+        "width": 1680,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1184,
+        -1312
+      ],
+      "typeVersion": 1,
+      "id": "a89bc1d4-d77c-42c2-8bf3-5fd01828bc93",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date();\n\nfunction parseSheetDate(value) {\n  if (!value) return null;\n\n  const parsed = Date.parse(value);\n  if (!isNaN(parsed)) {\n    return new Date(parsed);\n  }\n\n  if (typeof value === 'string') {\n    const parts = value.split('/');\n    if (parts.length === 3) {\n      return new Date(parts[2], parts[1] - 1, parts[0]);\n    }\n  }\n\n  return null;\n}\n\nfunction daysBetween(d1, d2) {\n  return Math.floor((d1 - d2) / (1000 * 60 * 60 * 24));\n}\n\nconst allItems = $input.all();\n\nreturn allItems.filter(item => {\n  const status = item.json.Status;\n  const followup = item.json[\"Followup Sent\"];\n  const appliedDate = parseSheetDate(item.json[\"Applied Date\"]);\n\n  if (!appliedDate) return false;\n\n  const age = daysBetween(today, appliedDate);\n\n  return (\n    status === \"Applied\" &&\n    age >= 7 &&\n    followup !== \"Yes\"\n  );\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -640
+      ],
+      "id": "0ada471c-0645-4446-b718-1bc34ecfe78c",
+      "name": "Applications thatt need followups",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "53a95632-5239-42cf-b435-22d26ddebe74",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "apply",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -864,
+        -992
+      ],
+      "id": "42d5b931-36ae-4080-af39-242aa4a578b5",
+      "name": "If1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Retrival of data from the conformation mail": {
+      "main": [
+        [
+          {
+            "node": "Adding the applied job to the sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recieved Reply from the company": {
+      "main": [
+        [
+          {
+            "node": "Categorise the status based on the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Applying to the company": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Categorise the status based on the reply": {
+      "main": [
+        [
+          {
+            "node": "Update the status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Applications thatt need followups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Retrival of data from the conformation mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "versionId": "21781aa2-563c-41ec-9abb-90a72fb3eda5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "57241fa706dcf56157012f7a8774a8e1e5711cd4ba619c844260f3f8d46b8450"
+  },
+  "id": "M0sbRUmVrqxJeZFgQCY1r",
+  "tags": []
+}
