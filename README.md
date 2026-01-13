@@ -35,4 +35,5 @@ A lightweight automation built with n8n to track job applications automatically 
 - Automatic follow-up emails
 - Smarter status classification
 - Dashboard view
+<img width="1920" height="937" alt="Screenshot (350)" src="https://github.com/user-attachments/assets/cb88146c-5245-4263-bda1-bf8107e97d05" />
 
